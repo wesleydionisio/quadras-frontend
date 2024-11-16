@@ -4,14 +4,13 @@ import { Container, Grid, Typography } from '@mui/material';
 import CourtCard from '../components/booking/CourtCard';
 
 const HomePage = () => {
-  const [courts, setCourts] = useState([]); // Estado para armazenar as quadras
+  const [courts, setCourts] = useState([]);
 
-  // Função para buscar as quadras
   useEffect(() => {
     const fetchCourts = async () => {
       try {
-        const response = await axios.get('/api/courts'); // Chamada à API
-        setCourts(response.data); // Atualiza o estado com os dados das quadras
+        const response = await axios.get('/api/courts');
+        setCourts(response.data);
       } catch (error) {
         console.error('Erro ao buscar quadras:', error);
       }
