@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
-import axios from '../api/apiService'; // Importa a instância personalizada do Axios
+import axios from '../api/apiService';
 import Calendar from '../components/booking/Calendar';
 import TimeSlots from '../components/booking/TimeSlots';
 import SportsButtons from '../components/booking/SportsButtons';
@@ -100,19 +100,29 @@ const BookingPage = () => {
     try {
       const token = localStorage.getItem('authToken');
 
+      // Aqui, substitua 'Nome do Cliente' por dados reais do usuário.
+      // Se estiver usando um contexto de autenticação, recupere o nome do usuário a partir dele.
+      const userName = 'Nome do Cliente'; // Exemplo estático
+
+      let reservationDetails = {
+        quadra_id: quadraId,
+        nome: court.nome,
+        foto_principal: court.foto_principal,
+        data: selectedDate.toISOString().split('T')[0],
+        horario_inicio: selectedSlot.horario_inicio,
+        horario_fim: selectedSlot.horario_fim,
+        esporte: court.esportes_permitidos.find(sport => sport._id === selectedSport)?.nome || 'N/A',
+        cliente: userName, // Dados reais do usuário
+        pagamento: selectedPayment,
+        total: 100, // Substitua pelo cálculo real do total
+        pague_no_local: true, // Substitua conforme a lógica
+      };
+
       if (!token) {
         // Salva reserva pendente e redireciona para login
-        localStorage.setItem(
-          'pendingReservation',
-          JSON.stringify({
-            quadra_id: quadraId,
-            data: selectedDate.toISOString().split('T')[0],
-            horario_inicio: selectedSlot.horario_inicio,
-            horario_fim: selectedSlot.horario_fim,
-            esporte_id: selectedSport,
-            pagamento: selectedPayment,
-          })
-        );
+        localStorage.setItem('pendingReservation', JSON.stringify({
+          ...reservationDetails,
+        }));
         navigate('/login');
         return;
       }
@@ -126,10 +136,16 @@ const BookingPage = () => {
         pagamento: selectedPayment,
       };
 
-      await axios.post(`/bookings`, requestBody);
+      const response = await axios.post(`/bookings`, requestBody);
+      
+      // Atualize os detalhes da reserva com resposta do backend, se necessário
+      reservationDetails = {
+        ...reservationDetails,
+        total: response.data.total || 100, // Exemplo
+      };
 
-      alert('Reserva confirmada com sucesso!');
-      navigate('/');
+      // Redireciona para a página de revisão passando os detalhes
+      navigate('/reservation-review', { state: { reservation: reservationDetails } });
     } catch (error) {
       console.error('Erro ao confirmar a reserva:', error);
       const errorMessage =
