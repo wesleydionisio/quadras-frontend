@@ -1,7 +1,21 @@
 // src/pages/ReservationReview.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Typography, Box, Button, Grid, Paper, CircularProgress } from '@mui/material';
+import {
+  Container,
+  Typography,
+  Box,
+  Button,
+  Grid,
+  Paper,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Chip,
+} from '@mui/material';
 import axios from '../api/apiService';
 
 const ReservationReview = () => {
@@ -11,6 +25,7 @@ const ReservationReview = () => {
   const [loading, setLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState('');
   const [error, setError] = useState('');
+  const [openCancelModal, setOpenCancelModal] = useState(false); // Estado para controlar o modal
 
   useEffect(() => {
     if (!reservationId) {
@@ -43,7 +58,7 @@ const ReservationReview = () => {
     // Extrai ano, mês e dia da string de data
     const [year, month, day] = reservation.data.split('-').map(Number);
     const [hour, minute] = reservation.horario_inicio.split(':').map(Number);
-    const bookingDate = new Date(year, month - 1, day, hour, minute);
+    const bookingDate = new Date(year, month - 1, day, hour, minute); // Data local
 
     const updateCountdown = () => {
       const now = new Date();
@@ -67,6 +82,47 @@ const ReservationReview = () => {
 
     return () => clearInterval(interval);
   }, [reservation]);
+
+  // Função para abrir o modal de cancelamento
+  const handleOpenCancelModal = () => {
+    setOpenCancelModal(true);
+  };
+
+  // Função para fechar o modal de cancelamento
+  const handleCloseCancelModal = () => {
+    setOpenCancelModal(false);
+  };
+
+  // Função para cancelar a reserva
+  const handleCancelReservation = async () => {
+    try {
+      const token = localStorage.getItem('authToken'); // Supondo que o token esteja armazenado no localStorage
+
+      // Fazer a requisição para cancelar a reserva
+      const response = await axios.put(`/bookings/${reservationId}/cancel`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.data.success) {
+        // Atualizar o estado da reserva para refletir o cancelamento
+        setReservation(prev => ({
+          ...prev,
+          status: 'cancelada',
+        }));
+        // Fechar o modal
+        handleCloseCancelModal();
+      } else {
+        alert('Não foi possível cancelar a reserva. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao cancelar a reserva:', error);
+      const errorMessage =
+        error.response?.data?.message || 'Não foi possível cancelar a reserva. Tente novamente.';
+      alert(errorMessage);
+    }
+  };
 
   if (loading) {
     return (
@@ -129,6 +185,13 @@ const ReservationReview = () => {
           </Grid>
         </Grid>
 
+        {/* Label de Reserva Cancelada */}
+        {reservation.status === 'cancelada' && (
+          <Box mt={3}>
+            <Chip label="Reserva Cancelada" color="error" size="large" />
+          </Box>
+        )}
+
         {/* Pagamento */}
         <Box mt={4}>
           <Typography variant="h6">Pagamento</Typography>
@@ -142,15 +205,43 @@ const ReservationReview = () => {
           <Button variant="outlined" color="primary">
             Compartilhar
           </Button>
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => navigate('/')}
-          >
-            Cancelar
-          </Button>
+          {/* Exibir botão de cancelar apenas se a reserva não estiver cancelada */}
+          {reservation.status !== 'cancelada' && (
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={handleOpenCancelModal}
+            >
+              Cancelar
+            </Button>
+          )}
         </Box>
       </Paper>
+
+      {/* Modal de Confirmação de Cancelamento */}
+      <Dialog
+        open={openCancelModal}
+        onClose={handleCloseCancelModal}
+        aria-labelledby="cancel-reservation-dialog-title"
+        aria-describedby="cancel-reservation-dialog-description"
+      >
+        <DialogTitle id="cancel-reservation-dialog-title">
+          Confirmar Cancelamento
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="cancel-reservation-dialog-description">
+            Você tem certeza que deseja cancelar esta reserva? Essa ação não pode ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCancelModal} color="primary">
+            Não
+          </Button>
+          <Button onClick={handleCancelReservation} color="secondary" autoFocus>
+            Sim, Cancelar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
