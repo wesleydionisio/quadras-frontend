@@ -7,6 +7,7 @@ import ReviewPage from './pages/ReviewPage';
 import Header from './components/global/Header';
 import Footer from './components/global/Footer';
 import ReservationReview from './pages/ReservationReview';
+import { SnackbarProvider } from 'notistack';
 
 
 const AppRoutes = () => {

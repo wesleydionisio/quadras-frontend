@@ -17,11 +17,16 @@ import {
   Chip,
 } from '@mui/material';
 import axios from '../api/apiService';
+import { parse, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useSnackbar } from 'notistack'; // Importar useSnackbar
 
 const ReservationReview = () => {
   const { reservationId } = useParams(); // Extrai o ID da reserva da URL
   const navigate = useNavigate();
+  const { enqueueSnackbar } = useSnackbar(); // Usar useSnackbar
   const [reservation, setReservation] = useState(null);
+  const [bookingDate, setBookingDate] = useState(null); // Estado para armazenar bookingDate
   const [loading, setLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState('');
   const [error, setError] = useState('');
@@ -52,36 +57,41 @@ const ReservationReview = () => {
     fetchReservationDetails();
   }, [reservationId, navigate]);
 
-  useEffect(() => {
-    if (!reservation) return;
+  // Dentro do useEffect que processa a reserva
+useEffect(() => {
+  if (!reservation) return;
+  
+  const [year, month, day] = reservation.data.split('-').map(Number);
+  const [hour, minute] = reservation.horario_inicio.split(':').map(Number);
+  
+  // Criar um objeto Date local
+  const bookingDateLocal = new Date(year, month - 1, day, hour, minute);
+  
+  // Atualizar o estado
+  setBookingDate(bookingDateLocal);
 
-    // Extrai ano, mês e dia da string de data
-    const [year, month, day] = reservation.data.split('-').map(Number);
-    const [hour, minute] = reservation.horario_inicio.split(':').map(Number);
-    const bookingDate = new Date(year, month - 1, day, hour, minute); // Data local
+  const updateCountdown = () => {
+    const now = new Date();
+    const difference = bookingDateLocal - now;
 
-    const updateCountdown = () => {
-      const now = new Date();
-      const difference = bookingDate - now;
+    if (difference <= 0) {
+      setTimeRemaining('A reserva já começou.');
+      clearInterval(interval);
+      return;
+    }
 
-      if (difference <= 0) {
-        setTimeRemaining('A reserva já começou.');
-        clearInterval(interval);
-        return;
-      }
+    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((difference / (1000 * 60)) % 60);
+    const seconds = Math.floor((difference / 1000) % 60);
 
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / (1000 * 60)) % 60);
-      const seconds = Math.floor((difference / 1000) % 60);
+    setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+  };
 
-      setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
-    };
+  const interval = setInterval(updateCountdown, 1000);
+  updateCountdown();
 
-    const interval = setInterval(updateCountdown, 1000);
-    updateCountdown();
-
-    return () => clearInterval(interval);
-  }, [reservation]);
+  return () => clearInterval(interval);
+}, [reservation]);
 
   // Função para abrir o modal de cancelamento
   const handleOpenCancelModal = () => {
@@ -113,14 +123,18 @@ const ReservationReview = () => {
         }));
         // Fechar o modal
         handleCloseCancelModal();
+        // Exibir notificação de sucesso
+        enqueueSnackbar('Reserva cancelada com sucesso.', { variant: 'success' });
       } else {
-        alert('Não foi possível cancelar a reserva. Tente novamente.');
+        // Exibir notificação de erro
+        enqueueSnackbar('Não foi possível cancelar a reserva. Tente novamente.', { variant: 'error' });
       }
     } catch (error) {
       console.error('Erro ao cancelar a reserva:', error);
       const errorMessage =
         error.response?.data?.message || 'Não foi possível cancelar a reserva. Tente novamente.';
-      alert(errorMessage);
+      // Exibir notificação de erro
+      enqueueSnackbar(errorMessage, { variant: 'error' });
     }
   };
 
@@ -147,13 +161,10 @@ const ReservationReview = () => {
     );
   }
 
-  // Formatando a data para exibição
-  const formattedDate = new Date(reservation.data).toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  // Verificar se bookingDate está definido
+  const formattedDate = bookingDate
+    ? format(bookingDate, 'eeee, d MMMM yyyy', { locale: ptBR })
+    : 'Data inválida';
 
   return (
     <Container maxWidth="md" sx={{ mt: 5 }}>

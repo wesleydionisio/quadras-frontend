@@ -25,18 +25,23 @@ const BookingPage = () => {
   const duracao = 1;
 
   // Função para gerar slots de horário
+
+
   const generateTimeSlots = (reservas) => {
+    // Filtrar apenas reservas que não estão canceladas
+    const reservasAtivas = reservas.filter(reserva => reserva.status !== 'cancelada');
+  
     const slots = [];
     for (let hour = horarioInicio; hour < horarioFim; hour++) {
       const slotInicio = `${hour.toString().padStart(2, '0')}:00`;
       const slotFim = `${(hour + duracao).toString().padStart(2, '0')}:00`;
-
-      const isReserved = reservas.some(
+  
+      const isReserved = reservasAtivas.some(
         (reserva) =>
           (reserva.inicio <= slotInicio && reserva.fim > slotInicio) ||
           (reserva.inicio < slotFim && reserva.fim >= slotFim)
       );
-
+  
       slots.push({ horario_inicio: slotInicio, horario_fim: slotFim, available: !isReserved });
     }
     console.log('Slots gerados:', slots); // Log para verificar
