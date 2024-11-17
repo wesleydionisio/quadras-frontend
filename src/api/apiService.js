@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Cria uma instância do Axios
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api', // Inclui /api
+  baseURL: 'http://localhost:3000/api', // Inclui apenas uma vez /api
 });
 
 // Interceptor para adicionar o token em todas as requisições

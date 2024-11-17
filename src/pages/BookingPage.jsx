@@ -1,12 +1,12 @@
-// BookingPage.jsx
+// src/pages/BookingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
-import axios from '../api/apiService';
+import axios from '../api/apiService'; // Importa a instância personalizada do Axios
 import Calendar from '../components/booking/Calendar';
 import TimeSlots from '../components/booking/TimeSlots';
-import SportsDropdown from '../components/booking/SportsDropdown';
-import PaymentOptions from '../components/booking/PaymentOptions';
+import SportsButtons from '../components/booking/SportsButtons';
+import PaymentButtons from '../components/booking/PaymentButtons';
 
 const BookingPage = () => {
   const { quadraId } = useParams();
@@ -47,7 +47,7 @@ const BookingPage = () => {
   useEffect(() => {
     const fetchCourtDetails = async () => {
       try {
-        const response = await axios.get(`/courts/${quadraId}`);
+        const response = await axios.get(`/courts/${quadraId}`); // Requisição correta
         console.log('Resposta da API /courts/:id:', response.data); // Log para inspeção
 
         // Ajuste conforme a estrutura da resposta
@@ -102,14 +102,17 @@ const BookingPage = () => {
 
       if (!token) {
         // Salva reserva pendente e redireciona para login
-        localStorage.setItem('pendingReservation', JSON.stringify({
-          quadra_id: quadraId,
-          data: selectedDate.toISOString().split('T')[0],
-          horario_inicio: selectedSlot.horario_inicio,
-          horario_fim: selectedSlot.horario_fim,
-          esporte_id: selectedSport,
-          pagamento: selectedPayment,
-        }));
+        localStorage.setItem(
+          'pendingReservation',
+          JSON.stringify({
+            quadra_id: quadraId,
+            data: selectedDate.toISOString().split('T')[0],
+            horario_inicio: selectedSlot.horario_inicio,
+            horario_fim: selectedSlot.horario_fim,
+            esporte_id: selectedSport,
+            pagamento: selectedPayment,
+          })
+        );
         navigate('/login');
         return;
       }
@@ -172,24 +175,26 @@ const BookingPage = () => {
             </Box>
           )}
 
-          {/* Dropdown de Esportes */}
+          {/* Botões de Esportes */}
           {selectedSlot && (
             <Box mt={5}>
-              <SportsDropdown
+              <Typography variant="h6">Selecione um Esporte:</Typography>
+              <SportsButtons
                 sports={court.esportes_permitidos || []}
-                onSportSelect={setSelectedSport}
                 selectedSport={selectedSport}
+                onSportSelect={setSelectedSport}
               />
             </Box>
           )}
 
-          {/* Opções de Pagamento */}
+          {/* Botões de Pagamento */}
           {selectedSport && (
             <Box mt={5}>
-              <PaymentOptions
+              <Typography variant="h6">Selecione uma Forma de Pagamento:</Typography>
+              <PaymentButtons
                 payments={court.formas_pagamento || []}
-                onPaymentSelect={setSelectedPayment}
                 selectedPayment={selectedPayment}
+                onPaymentSelect={setSelectedPayment}
               />
             </Box>
           )}
