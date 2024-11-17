@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Container, Typography, Box, CircularProgress } from '@mui/material';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
 import axios from '../api/apiService'; // Importa o serviço de API
 import Calendar from '../components/booking/Calendar';
 import TimeSlots from '../components/booking/TimeSlots';
@@ -9,6 +9,7 @@ import PaymentOptions from '../components/booking/PaymentOptions';
 
 const BookingPage = () => {
   const { quadraId } = useParams();
+  const navigate = useNavigate();
   const [court, setCourt] = useState(null); // Armazena os detalhes da quadra
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -72,6 +73,45 @@ const BookingPage = () => {
     return slots;
   };
 
+  // Função para confirmar a reserva
+  const handleConfirmReservation = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+
+      if (!token) {
+        // Salva os dados da reserva localmente e redireciona para login
+        localStorage.setItem('pendingReservation', JSON.stringify({
+          quadraId,
+          data: selectedDate,
+          horario: selectedSlot,
+          esporte: selectedSport,
+          pagamento: selectedPayment,
+        }));
+        navigate('/login'); // Redireciona para a página de login
+        return;
+      }
+
+      const requestBody = {
+        quadraId,
+        data: selectedDate,
+        horario: selectedSlot,
+        esporte: selectedSport,
+        pagamento: selectedPayment,
+      };
+
+      await axios.post(`/api/bookings`, requestBody, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      alert('Reserva confirmada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao confirmar a reserva:', error);
+      alert('Não foi possível confirmar a reserva. Tente novamente.');
+    }
+  };
+
   return (
     <Container>
       {court ? (
@@ -116,10 +156,23 @@ const BookingPage = () => {
           {selectedSport && (
             <Box mt={3}>
               <PaymentOptions
-                payments={court?.formas_pagamento || []}
+                payments={['Dinheiro', 'Cartão de Crédito', 'Pix']}
                 onPaymentSelect={setSelectedPayment}
-                selectedPayment={selectedPayment} // Estado para exibir a opção selecionada
+                selectedPayment={selectedPayment}
               />
+            </Box>
+          )}
+
+          {/* Botão de Confirmar Reserva */}
+          {selectedDate && selectedSlot && selectedSport && selectedPayment && (
+            <Box mt={3} display="flex" justifyContent="center">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleConfirmReservation}
+              >
+                Confirmar Reserva
+              </Button>
             </Box>
           )}
         </>
