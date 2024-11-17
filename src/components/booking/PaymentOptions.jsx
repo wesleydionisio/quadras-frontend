@@ -1,3 +1,4 @@
+// src/components/booking/PaymentOptions.jsx
 import React from 'react';
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 
@@ -12,7 +13,7 @@ const PaymentOptions = ({ payments, onPaymentSelect, selectedPayment }) => {
       <Select
         labelId="payment-select-label"
         id="payment-select"
-        value={selectedPayment || ''} // Valor controlado
+        value={selectedPayment || ''}
         onChange={handleSelect}
         label="Formas de Pagamento"
       >

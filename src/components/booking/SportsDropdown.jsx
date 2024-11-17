@@ -1,25 +1,26 @@
+// src/components/booking/SportsDropdown.jsx
 import React from 'react';
 import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 
 const SportsDropdown = ({ sports, onSportSelect, selectedSport }) => {
   const handleSelect = (event) => {
-    onSportSelect(event.target.value); // Atualiza o estado no componente pai
+    onSportSelect(event.target.value);
   };
 
   return (
     <FormControl fullWidth variant="outlined" sx={{ mt: 2 }}>
-      <InputLabel id="sports-select-label">Esportes</InputLabel>
+      <InputLabel id="sport-select-label">Esporte</InputLabel>
       <Select
-        labelId="sports-select-label"
-        id="sports-select"
-        value={selectedSport || ''} // Valor controlado
+        labelId="sport-select-label"
+        id="sport-select"
+        value={selectedSport || ''}
         onChange={handleSelect}
-        label="Esportes"
+        label="Esporte"
       >
         {sports.length > 0 ? (
           sports.map((sport) => (
-            <MenuItem key={sport.id || sport._id} value={sport.id || sport._id}>
-              {sport.name || sport.nome}
+            <MenuItem key={sport._id} value={sport._id}>
+              {sport.nome}
             </MenuItem>
           ))
         ) : (

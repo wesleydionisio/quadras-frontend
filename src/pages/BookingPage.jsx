@@ -1,7 +1,8 @@
+// BookingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Box, Button, CircularProgress } from '@mui/material';
-import axios from '../api/apiService'; // Importa o serviço de API
+import axios from '../api/apiService';
 import Calendar from '../components/booking/Calendar';
 import TimeSlots from '../components/booking/TimeSlots';
 import SportsDropdown from '../components/booking/SportsDropdown';
@@ -10,46 +11,83 @@ import PaymentOptions from '../components/booking/PaymentOptions';
 const BookingPage = () => {
   const { quadraId } = useParams();
   const navigate = useNavigate();
-  const [court, setCourt] = useState(null); // Armazena os detalhes da quadra
+  const [court, setCourt] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedSlot, setSelectedSlot] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedSport, setSelectedSport] = useState('');
   const [selectedPayment, setSelectedPayment] = useState('');
-  const [timeSlots, setTimeSlots] = useState([]); // Time slots disponíveis
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  // Horários de funcionamento fixos (exemplo)
-  const horarioInicio = 8; // 08:00
-  const horarioFim = 22; // 22:00
+  const horarioInicio = 8;
+  const horarioFim = 22;
+  const duracao = 1;
 
-  // Buscar detalhes da quadra ao carregar a página
+  // Função para gerar slots de horário
+  const generateTimeSlots = (reservas) => {
+    const slots = [];
+    for (let hour = horarioInicio; hour < horarioFim; hour++) {
+      const slotInicio = `${hour.toString().padStart(2, '0')}:00`;
+      const slotFim = `${(hour + duracao).toString().padStart(2, '0')}:00`;
+
+      const isReserved = reservas.some(
+        (reserva) =>
+          (reserva.inicio <= slotInicio && reserva.fim > slotInicio) ||
+          (reserva.inicio < slotFim && reserva.fim >= slotFim)
+      );
+
+      slots.push({ horario_inicio: slotInicio, horario_fim: slotFim, available: !isReserved });
+    }
+    console.log('Slots gerados:', slots); // Log para verificar
+    return slots;
+  };
+
+  // Buscar detalhes da quadra
   useEffect(() => {
     const fetchCourtDetails = async () => {
       try {
-        const response = await axios.get(`/api/courts/${quadraId}`); // Chamada ao backend
-        setCourt(response.data); // Atualiza os detalhes da quadra
+        const response = await axios.get(`/courts/${quadraId}`);
+        console.log('Resposta da API /courts/:id:', response.data); // Log para inspeção
+
+        // Ajuste conforme a estrutura da resposta
+        if (response.data.court) {
+          setCourt(response.data.court);
+        } else if (response.data.data) {
+          setCourt(response.data.data);
+        } else {
+          setCourt(response.data); // Caso a estrutura seja diferente
+        }
       } catch (error) {
         console.error('Erro ao buscar detalhes da quadra:', error);
+        setError('Não foi possível carregar os detalhes da quadra.');
+        setLoading(false); // Parar o loading em caso de erro
       }
     };
 
     fetchCourtDetails();
   }, [quadraId]);
 
-  // Atualiza os horários disponíveis com base na data selecionada
+  // Buscar horários reservados
   useEffect(() => {
     if (selectedDate) {
       const fetchTimeSlots = async () => {
+        setLoading(true);
         try {
           const formattedDate = new Date(selectedDate).toISOString().split('T')[0];
-          const response = await axios.get(`/api/courts/${quadraId}/reserved-times`, {
+          const response = await axios.get(`/bookings/${quadraId}/reserved-times`, {
             params: { data: formattedDate },
           });
 
-          const reservedTimes = response.data.horariosReservados || [];
-          const slots = generateTimeSlots(reservedTimes);
+          const reservas = response.data.horarios_agendados || [];
+          console.log('Reservas recebidas:', reservas); // Log para verificar
+          const slots = generateTimeSlots(reservas);
           setTimeSlots(slots);
         } catch (error) {
           console.error('Erro ao buscar horários disponíveis:', error);
+          setError('Não foi possível carregar os horários disponíveis.');
+        } finally {
+          setLoading(false);
         }
       };
 
@@ -57,95 +95,88 @@ const BookingPage = () => {
     }
   }, [selectedDate, quadraId]);
 
-  // Gera time slots com base nos horários de funcionamento e horários reservados
-  const generateTimeSlots = (horariosReservados) => {
-    const slots = [];
-    for (let hour = horarioInicio; hour < horarioFim; hour++) {
-      const slot = `${hour.toString().padStart(2, '0')}:00`;
-
-      const isReserved = horariosReservados.some(
-        (reserva) =>
-          reserva.horario_inicio === slot || reserva.horario_fim === slot
-      );
-
-      slots.push({ time: slot, available: !isReserved });
-    }
-    return slots;
-  };
-
-  // Função para confirmar a reserva
+  // Função para confirmar reserva
   const handleConfirmReservation = async () => {
     try {
       const token = localStorage.getItem('authToken');
 
       if (!token) {
-        // Salva os dados da reserva localmente e redireciona para login
+        // Salva reserva pendente e redireciona para login
         localStorage.setItem('pendingReservation', JSON.stringify({
-          quadraId,
-          data: selectedDate,
-          horario: selectedSlot,
-          esporte: selectedSport,
+          quadra_id: quadraId,
+          data: selectedDate.toISOString().split('T')[0],
+          horario_inicio: selectedSlot.horario_inicio,
+          horario_fim: selectedSlot.horario_fim,
+          esporte_id: selectedSport,
           pagamento: selectedPayment,
         }));
-        navigate('/login'); // Redireciona para a página de login
+        navigate('/login');
         return;
       }
 
       const requestBody = {
-        quadraId,
-        data: selectedDate,
-        horario: selectedSlot,
-        esporte: selectedSport,
+        quadra_id: quadraId,
+        data: selectedDate.toISOString().split('T')[0],
+        horario_inicio: selectedSlot.horario_inicio,
+        horario_fim: selectedSlot.horario_fim,
+        esporte_id: selectedSport,
         pagamento: selectedPayment,
       };
 
-      await axios.post(`/api/bookings`, requestBody, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      await axios.post(`/bookings`, requestBody);
 
       alert('Reserva confirmada com sucesso!');
+      navigate('/');
     } catch (error) {
       console.error('Erro ao confirmar a reserva:', error);
-      alert('Não foi possível confirmar a reserva. Tente novamente.');
+      const errorMessage =
+        error.response?.data?.message || 'Não foi possível confirmar a reserva. Tente novamente.';
+      alert(errorMessage);
     }
   };
 
   return (
-    <Container>
+    <Container maxWidth="md">
       {court ? (
         <>
-          {/* Imagem e Nome da Quadra */}
-          <Box>
+          {/* Detalhes da Quadra */}
+          <Box textAlign="center">
             <img
               src={court.foto_principal || 'https://via.placeholder.com/150'}
               alt={court.nome}
               width="100%"
               style={{ borderRadius: '8px', marginBottom: '16px' }}
             />
-            <Typography variant="h5" align="center">
+            <Typography variant="h4" align="center">
               {court.nome}
+            </Typography>
+            <Typography variant="subtitle1" align="center" color="textSecondary">
+              {court.descricao}
             </Typography>
           </Box>
 
           {/* Calendário */}
-          <Box mt={3}>
+          <Box mt={5}>
             <Calendar onDateChange={setSelectedDate} />
           </Box>
 
           {/* Time Slots */}
           {selectedDate && (
-            <Box mt={3}>
-              <TimeSlots slots={timeSlots} onSlotSelect={setSelectedSlot} />
+            <Box mt={5}>
+              <Typography variant="h6">Selecione um Horário:</Typography>
+              {loading ? (
+                <CircularProgress />
+              ) : (
+                <TimeSlots slots={timeSlots} onSlotSelect={setSelectedSlot} />
+              )}
             </Box>
           )}
 
           {/* Dropdown de Esportes */}
           {selectedSlot && (
-            <Box mt={3}>
+            <Box mt={5}>
               <SportsDropdown
-                sports={court?.esportes_permitidos || []}
+                sports={court.esportes_permitidos || []}
                 onSportSelect={setSelectedSport}
                 selectedSport={selectedSport}
               />
@@ -154,9 +185,9 @@ const BookingPage = () => {
 
           {/* Opções de Pagamento */}
           {selectedSport && (
-            <Box mt={3}>
+            <Box mt={5}>
               <PaymentOptions
-                payments={['Dinheiro', 'Cartão de Crédito', 'Pix']}
+                payments={court.formas_pagamento || []}
                 onPaymentSelect={setSelectedPayment}
                 selectedPayment={selectedPayment}
               />
@@ -165,19 +196,29 @@ const BookingPage = () => {
 
           {/* Botão de Confirmar Reserva */}
           {selectedDate && selectedSlot && selectedSport && selectedPayment && (
-            <Box mt={3} display="flex" justifyContent="center">
+            <Box mt={5} display="flex" justifyContent="center">
               <Button
                 variant="contained"
                 color="primary"
+                size="large"
                 onClick={handleConfirmReservation}
               >
                 Confirmar Reserva
               </Button>
             </Box>
           )}
+
+          {/* Exibir Erros */}
+          {error && (
+            <Box mt={3}>
+              <Typography variant="body1" color="error" align="center">
+                {error}
+              </Typography>
+            </Box>
+          )}
         </>
       ) : (
-        // Loader enquanto os detalhes da quadra são carregados
+        // Loader enquanto carrega
         <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
           <CircularProgress />
         </Box>

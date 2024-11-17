@@ -9,7 +9,7 @@ const HomePage = () => {
   useEffect(() => {
     const fetchCourts = async () => {
       try {
-        const response = await axios.get('/api/courts');
+        const response = await axios.get('/courts');
         setCourts(response.data);
       } catch (error) {
         console.error('Erro ao buscar quadras:', error);

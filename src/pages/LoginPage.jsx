@@ -1,3 +1,4 @@
+// src/pages/LoginPage.jsx
 import React, { useState } from 'react';
 import {
   Container,
@@ -17,6 +18,8 @@ const LoginPage = () => {
   const [senha, setSenha] = useState('');
   const [nome, setNome] = useState(''); // Usado apenas na criação de conta
   const [telefone, setTelefone] = useState('');
+  const [loading, setLoading] = useState(false); // Estado para carregamento
+  const [error, setError] = useState(''); // Estado para erros
   const navigate = useNavigate();
 
   const handleTabChange = (event, newValue) => {
@@ -25,54 +28,70 @@ const LoginPage = () => {
     setSenha('');
     setNome('');
     setTelefone('');
+    setError('');
   };
 
   const handleLogin = async () => {
+    setError('');
     try {
       if (!email || !senha) {
-        alert('Por favor, preencha todos os campos.');
+        setError('Por favor, preencha todos os campos.');
         return;
       }
-      const response = await axios.post('/api/auth/login', { email, senha });
+      setLoading(true);
+      const response = await axios.post('/auth/login', { email, senha });
       localStorage.setItem('authToken', response.data.token);
 
       // Verifica se há uma reserva pendente
       const pendingReservation = localStorage.getItem('pendingReservation');
       if (pendingReservation) {
         const reservationData = JSON.parse(pendingReservation);
-        await axios.post('/api/bookings', reservationData, {
-          headers: { Authorization: `Bearer ${response.data.token}` },
-        });
-        alert('Reserva confirmada com sucesso!');
-        localStorage.removeItem('pendingReservation');
+        try {
+          await axios.post('/bookings', reservationData);
+          alert('Reserva confirmada com sucesso!');
+          localStorage.removeItem('pendingReservation');
+        } catch (bookingError) {
+          console.error('Erro ao confirmar a reserva:', bookingError);
+          setError(bookingError.response?.data?.message || 'Não foi possível confirmar a reserva.');
+        }
       }
 
       navigate('/'); // Redireciona para a página inicial
     } catch (error) {
       console.error('Erro ao fazer login:', error);
-      const errorMessage =
-        error.response?.data?.message || 'Erro ao fazer login. Verifique suas credenciais.';
-      alert(errorMessage);
+      setError(
+        error.response?.data?.message || 'Erro ao fazer login. Verifique suas credenciais.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCreateAccount = async () => {
+    setError('');
     try {
       if (!nome || !email || !telefone || !senha) {
-        alert('Por favor, preencha todos os campos.');
+        setError('Por favor, preencha todos os campos.');
         return;
       }
+      setLoading(true);
       const requestBody = { nome, email, telefone, senha };
-      const response = await axios.post('/api/auth/register', requestBody);
+      await axios.post('/auth/register', requestBody);
       alert('Conta criada com sucesso! Faça login para continuar.');
 
       // Opcional: Automaticamente redireciona para a aba de login após criar a conta
       setTab(0);
+      setEmail('');
+      setSenha('');
+      setNome('');
+      setTelefone('');
     } catch (error) {
       console.error('Erro ao criar conta:', error);
-      const errorMessage =
-        error.response?.data?.message || 'Erro ao criar conta. Tente novamente.';
-      alert(errorMessage);
+      setError(
+        error.response?.data?.message || 'Erro ao criar conta. Tente novamente.'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -113,14 +132,20 @@ const LoginPage = () => {
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
               />
+              {error && (
+                <Typography variant="body2" color="error" align="center" mt={1}>
+                  {error}
+                </Typography>
+              )}
               <Button
                 variant="contained"
                 color="primary"
                 fullWidth
                 onClick={handleLogin}
                 sx={{ mt: 2 }}
+                disabled={loading}
               >
-                Fazer Login
+                {loading ? 'Fazendo Login...' : 'Fazer Login'}
               </Button>
             </Box>
           ) : (
@@ -157,14 +182,20 @@ const LoginPage = () => {
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
               />
+              {error && (
+                <Typography variant="body2" color="error" align="center" mt={1}>
+                  {error}
+                </Typography>
+              )}
               <Button
                 variant="contained"
                 color="primary"
                 fullWidth
                 onClick={handleCreateAccount}
                 sx={{ mt: 2 }}
+                disabled={loading}
               >
-                Criar Conta
+                {loading ? 'Criando Conta...' : 'Criar Conta'}
               </Button>
             </Box>
           )}
