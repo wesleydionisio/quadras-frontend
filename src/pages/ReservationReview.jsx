@@ -1,4 +1,5 @@
 // src/pages/ReservationReview.jsx
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -120,14 +121,8 @@ const ReservationReview = () => {
   // Função para cancelar a reserva
   const handleCancelReservation = async () => {
     try {
-      const token = localStorage.getItem('authToken'); // Supondo que o token esteja armazenado no localStorage
-
-      // Fazer a requisição para cancelar a reserva
-      const response = await axios.put(`/bookings/${reservationId}/cancel`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      // O token já está sendo adicionado automaticamente pelo interceptador do axios
+      const response = await axios.put(`/bookings/${reservationId}/cancel`);
 
       if (response.data.success) {
         // Atualizar o estado da reserva para refletir o cancelamento
