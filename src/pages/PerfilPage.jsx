@@ -65,20 +65,21 @@ const PerfilPage = () => {
     // eslint-disable-next-line
   }, [user]);
 
-  // Função para buscar as reservas do usuário
-  const fetchReservations = async () => {
-    try {
-      const response = await axios.get('/api/bookings/user');
-      if (response.data.success) {
-        setReservations(response.data.reservas);
-      } else {
-        enqueueSnackbar('Não foi possível carregar suas reservas.', { variant: 'error' });
-      }
-    } catch (error) {
-      console.error('Erro ao buscar reservas:', error);
-      enqueueSnackbar('Erro ao buscar reservas. Tente novamente.', { variant: 'error' });
+// Função para buscar as reservas do usuário
+const fetchReservations = async () => {
+  try {
+    const response = await axios.get('/bookings/user'); // Certifique-se de que a URL está correta
+    console.log('Reservas recebidas:', response.data.reservas); // Adicionado para depuração
+    if (response.data.success) {
+      setReservations(response.data.reservas);
+    } else {
+      enqueueSnackbar('Não foi possível carregar suas reservas.', { variant: 'error' });
     }
-  };
+  } catch (error) {
+    console.error('Erro ao buscar reservas:', error);
+    enqueueSnackbar('Erro ao buscar reservas. Tente novamente.', { variant: 'error' });
+  }
+};
 
   // Função para lidar com a edição dos campos do perfil
   const handleChangeProfile = (e) => {
@@ -91,7 +92,7 @@ const PerfilPage = () => {
   // Função para salvar as alterações do perfil
   const handleSave = async () => {
     try {
-      const response = await axios.put('/api/user/profile', profileData);
+      const response = await axios.put('/users/profile', profileData); // Corrigir a rota se necessário
       if (response.data.success) {
         enqueueSnackbar('Perfil atualizado com sucesso.', { variant: 'success' });
         setEditing(false);
@@ -158,7 +159,7 @@ const PerfilPage = () => {
     if (reservations.length === 0) {
       return <Typography variant="body1">Você não possui reservas.</Typography>;
     }
-
+  
     return (
       <Grid container spacing={2}>
         {reservations.map(reserva => (
@@ -166,27 +167,34 @@ const PerfilPage = () => {
             <Card>
               <CardHeader
                 avatar={
-                  <Avatar src={reserva.quadra.foto_principal} alt={reserva.quadra.nome} />
+                  <Avatar 
+                    src={reserva.quadra_id?.foto_principal || 'https://via.placeholder.com/150'} 
+                    alt={reserva.quadra_id?.nome || 'Quadra'} 
+                  />
                 }
-                title={reserva.quadra.nome}
+                title={reserva.quadra_id?.nome || 'Nome da Quadra'}
                 subheader={`${reserva.horario_inicio} - ${reserva.horario_fim}`}
               />
               <CardContent>
                 <Typography variant="body2" color="textSecondary">
-                  Data: {reserva.data}
+                  Data: {new Date(reserva.data).toLocaleDateString('pt-BR')}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Esporte: {reserva.esporte.nome}
+                  Esporte: {reserva.esporte?.nome || 'Esporte'}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
                   Status: {reserva.status}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Total: R$ {reserva.total.toFixed(2)}
+                  Total: R$ {reserva.total !== undefined ? reserva.total.toFixed(2) : '0.00'}
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button size="small" color="primary" onClick={() => navigate(`/reservation-review/${reserva._id}`)}>
+                <Button 
+                  size="small" 
+                  color="primary" 
+                  onClick={() => navigate(`/reservation-review/${reserva._id}`)}
+                >
                   Revisar Reserva
                 </Button>
               </CardActions>
