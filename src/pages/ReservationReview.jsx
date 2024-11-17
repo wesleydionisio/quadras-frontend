@@ -1,21 +1,44 @@
 // src/pages/ReservationReview.jsx
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Container, Typography, Box, Button, Grid, Paper } from '@mui/material';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Container, Typography, Box, Button, Grid, Paper, CircularProgress } from '@mui/material';
+import axios from '../api/apiService';
 
 const ReservationReview = () => {
-  const location = useLocation();
+  const { reservationId } = useParams(); // Extrai o ID da reserva da URL
   const navigate = useNavigate();
+  const [reservation, setReservation] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState('');
-
-  const reservation = location.state?.reservation;
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!reservation) {
-      // Se não houver dados de reserva, redirecione para a página inicial
-      navigate('/');
+    if (!reservationId) {
+      navigate('/'); // Redireciona para a página inicial se não houver ID
       return;
     }
+
+    const fetchReservationDetails = async () => {
+      try {
+        const response = await axios.get(`/bookings/${reservationId}`);
+        if (response.data.success) {
+          setReservation(response.data.reservation); // Ajuste conforme a estrutura da resposta
+        } else {
+          setError('Reserva não encontrada.');
+        }
+      } catch (err) {
+        console.error('Erro ao buscar detalhes da reserva:', err);
+        setError('Não foi possível carregar os detalhes da reserva.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReservationDetails();
+  }, [reservationId, navigate]);
+
+  useEffect(() => {
+    if (!reservation) return;
 
     // Extrai ano, mês e dia da string de data
     const [year, month, day] = reservation.data.split('-').map(Number);
@@ -43,16 +66,33 @@ const ReservationReview = () => {
     updateCountdown();
 
     return () => clearInterval(interval);
-  }, [reservation, navigate]);
+  }, [reservation]);
 
-  if (!reservation) {
-    return null; // Ou algum loader
+  if (loading) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 5, textAlign: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
   }
 
-  // Extrai ano, mês e dia para formatação
-  const [year, month, day] = reservation.data.split('-').map(Number);
-  const localDate = new Date(year, month - 1, day);
-  const formattedDate = localDate.toLocaleDateString('pt-BR', {
+  if (error) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 5 }}>
+        <Typography variant="h6" color="error" align="center">
+          {error}
+        </Typography>
+        <Box mt={3} display="flex" justifyContent="center">
+          <Button variant="contained" color="primary" onClick={() => navigate('/')}>
+            Voltar para a Página Inicial
+          </Button>
+        </Box>
+      </Container>
+    );
+  }
+
+  // Formatando a data para exibição
+  const formattedDate = new Date(reservation.data).toLocaleDateString('pt-BR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -102,7 +142,11 @@ const ReservationReview = () => {
           <Button variant="outlined" color="primary">
             Compartilhar
           </Button>
-          <Button variant="contained" color="secondary" onClick={() => navigate('/')}>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => navigate('/')}
+          >
             Cancelar
           </Button>
         </Box>

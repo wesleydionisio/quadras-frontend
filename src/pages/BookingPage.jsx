@@ -104,29 +104,6 @@ const BookingPage = () => {
       // Se estiver usando um contexto de autenticação, recupere o nome do usuário a partir dele.
       const userName = 'Nome do Cliente'; // Exemplo estático
 
-      let reservationDetails = {
-        quadra_id: quadraId,
-        nome: court.nome,
-        foto_principal: court.foto_principal,
-        data: selectedDate.toISOString().split('T')[0],
-        horario_inicio: selectedSlot.horario_inicio,
-        horario_fim: selectedSlot.horario_fim,
-        esporte: court.esportes_permitidos.find(sport => sport._id === selectedSport)?.nome || 'N/A',
-        cliente: userName, // Dados reais do usuário
-        pagamento: selectedPayment,
-        total: 100, // Substitua pelo cálculo real do total
-        pague_no_local: true, // Substitua conforme a lógica
-      };
-
-      if (!token) {
-        // Salva reserva pendente e redireciona para login
-        localStorage.setItem('pendingReservation', JSON.stringify({
-          ...reservationDetails,
-        }));
-        navigate('/login');
-        return;
-      }
-
       const requestBody = {
         quadra_id: quadraId,
         data: selectedDate.toISOString().split('T')[0],
@@ -136,16 +113,19 @@ const BookingPage = () => {
         pagamento: selectedPayment,
       };
 
+      // Requisição para criar a reserva
       const response = await axios.post(`/bookings`, requestBody);
-      
-      // Atualize os detalhes da reserva com resposta do backend, se necessário
-      reservationDetails = {
-        ...reservationDetails,
-        total: response.data.total || 100, // Exemplo
-      };
 
-      // Redireciona para a página de revisão passando os detalhes
-      navigate('/reservation-review', { state: { reservation: reservationDetails } });
+      if (response.data.success) {
+        // Obter o ID da reserva criada
+        const reservationId = response.data.reserva._id; // Ajuste conforme a resposta da API
+
+        // Redireciona para a página de revisão com o ID da reserva na URL
+        navigate(`/reservation-review/${reservationId}`);
+      } else {
+        // Trate o caso de falha na criação da reserva
+        alert('Não foi possível confirmar a reserva. Tente novamente.');
+      }
     } catch (error) {
       console.error('Erro ao confirmar a reserva:', error);
       const errorMessage =
