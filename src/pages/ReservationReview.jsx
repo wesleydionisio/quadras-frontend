@@ -17,7 +17,7 @@ import {
   Chip,
 } from '@mui/material';
 import axios from '../api/apiService';
-import { parse, format } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useSnackbar } from 'notistack'; // Importar useSnackbar
 
@@ -57,41 +57,55 @@ const ReservationReview = () => {
     fetchReservationDetails();
   }, [reservationId, navigate]);
 
-  // Dentro do useEffect que processa a reserva
-useEffect(() => {
-  if (!reservation) return;
-  
-  const [year, month, day] = reservation.data.split('-').map(Number);
-  const [hour, minute] = reservation.horario_inicio.split(':').map(Number);
-  
-  // Criar um objeto Date local
-  const bookingDateLocal = new Date(year, month - 1, day, hour, minute);
-  
-  // Atualizar o estado
-  setBookingDate(bookingDateLocal);
-
-  const updateCountdown = () => {
-    const now = new Date();
-    const difference = bookingDateLocal - now;
-
-    if (difference <= 0) {
-      setTimeRemaining('A reserva já começou.');
-      clearInterval(interval);
-      return;
+  // Função para mapear o status da reserva para um Chip apropriado
+  const getStatusChip = (status) => {
+    switch (status) {
+      case 'pendente':
+        return <Chip label="Pendente" color="warning" />;
+      case 'confirmada':
+        return <Chip label="Confirmada" color="success" />;
+      case 'cancelada':
+        return <Chip label="Cancelada" color="error" />;
+      default:
+        return <Chip label={status} color="default" />;
     }
-
-    const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((difference / (1000 * 60)) % 60);
-    const seconds = Math.floor((difference / 1000) % 60);
-
-    setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
   };
 
-  const interval = setInterval(updateCountdown, 1000);
-  updateCountdown();
+  // Dentro do useEffect que processa a reserva
+  useEffect(() => {
+    if (!reservation) return;
 
-  return () => clearInterval(interval);
-}, [reservation]);
+    const [year, month, day] = reservation.data.split('-').map(Number);
+    const [hour, minute] = reservation.horario_inicio.split(':').map(Number);
+    
+    // Criar um objeto Date local
+    const bookingDateLocal = new Date(year, month - 1, day, hour, minute);
+    
+    // Atualizar o estado
+    setBookingDate(bookingDateLocal);
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const difference = bookingDateLocal - now;
+
+      if (difference <= 0) {
+        setTimeRemaining('A reserva já começou.');
+        clearInterval(interval);
+        return;
+      }
+
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / (1000 * 60)) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+
+      setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+    };
+
+    const interval = setInterval(updateCountdown, 1000);
+    updateCountdown();
+
+    return () => clearInterval(interval);
+  }, [reservation]);
 
   // Função para abrir o modal de cancelamento
   const handleOpenCancelModal = () => {
@@ -196,12 +210,10 @@ useEffect(() => {
           </Grid>
         </Grid>
 
-        {/* Label de Reserva Cancelada */}
-        {reservation.status === 'cancelada' && (
-          <Box mt={3}>
-            <Chip label="Reserva Cancelada" color="error" size="large" />
-          </Box>
-        )}
+        {/* Label de Status da Reserva */}
+        <Box mt={3}>
+          {getStatusChip(reservation.status)}
+        </Box>
 
         {/* Pagamento */}
         <Box mt={4}>
