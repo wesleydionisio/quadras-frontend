@@ -65,121 +65,145 @@ const Header = () => {
         color: elevate ? '#000' : '#fff',
       }}
     >
-      <Toolbar sx={{ 
-        padding: '8px 16px',
-        minHeight: 'auto',
+      <Box sx={{ 
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center'
       }}>
-        {/* Logo */}
-        <Box
-          component={RouterLink}
-          to="/"
-          sx={{
-            textDecoration: 'none',
-            color: 'inherit',
-            flexGrow: 1,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <img
-            src="/logo_beach_sports.png"
-            alt="A Beach Sports Logo"
-            style={{
-              height: '60px', // Ajuste a altura conforme necessário
-              width: 'auto',
-              objectFit: 'contain'
+        <Toolbar sx={{ 
+          padding: '8px 16px',
+          minHeight: 'auto',
+          display: 'flex',
+          justifyContent: 'space-between',
+          width: '80%',
+          maxWidth: '1200px',
+        }}>
+          {/* Logo - Seção Esquerda */}
+          <Box
+            component={RouterLink}
+            to="/"
+            sx={{
+              textDecoration: 'none',
+              color: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              flex: '0 0 auto',
             }}
-          />
-        </Box>
-
-        {/* Menu para Desktop */}
-        {!isMobile && (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {menuItems.map((item) => (
-              <Button
-                key={item.label}
-                component={RouterLink}
-                to={item.path}
-                sx={{ color: 'inherit' }}
-              >
-                {item.label}
-              </Button>
-            ))}
-            <Button
-              component={RouterLink}
-              to="/entrar"
-              variant="outlined"
-              color="primary"
-              sx={{ ml: 2 }}
-            >
-              Entrar
-            </Button>
-            <Button
-              component={RouterLink}
-              to="/cadastrar"
-              variant="contained"
-              color="primary"
-              sx={{ ml: 1 }}
-            >
-              Cadastrar
-            </Button>
+          >
+            <img
+              src="/logo_beach_sports.png"
+              alt="A Beach Sports Logo"
+              style={{
+                height: '60px',
+                width: 'auto',
+                objectFit: 'contain'
+              }}
+            />
           </Box>
-        )}
 
-        {/* Menu para Mobile */}
-        {isMobile && (
-          <>
-            <IconButton
-              edge="start"
-              color="inherit"
-              aria-label="menu"
-              onClick={handleMenu}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              open={Boolean(anchorEl)}
-              onClose={handleClose}
-            >
+          {/* Menu para Desktop - Seção Central */}
+          {!isMobile && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: '1 1 auto',
+            }}>
               {menuItems.map((item) => (
-                <MenuItem
+                <Button
                   key={item.label}
                   component={RouterLink}
                   to={item.path}
-                  onClick={handleClose}
+                  sx={{ color: 'inherit' }}
                 >
                   {item.label}
-                </MenuItem>
+                </Button>
               ))}
-              <MenuItem
+            </Box>
+          )}
+
+          {/* Botões de Ação - Seção Direita */}
+          {!isMobile && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              flex: '0 0 auto',
+            }}>
+              <Button
                 component={RouterLink}
-                to="/entrar"
-                onClick={handleClose}
+                to="/login"
+                variant="outlined"
+                color="primary"
               >
                 Entrar
-              </MenuItem>
-              <MenuItem
+              </Button>
+              <Button
                 component={RouterLink}
-                to="/cadastrar"
-                onClick={handleClose}
+                to="/login"
+                variant="contained"
+                color="primary"
+                sx={{ ml: 1 }}
               >
                 Cadastrar
-              </MenuItem>
-            </Menu>
-          </>
-        )}
-      </Toolbar>
+              </Button>
+            </Box>
+          )}
+
+          {/* Menu para Mobile */}
+          {isMobile && (
+            <>
+              <IconButton
+                edge="start"
+                color="inherit"
+                aria-label="menu"
+                onClick={handleMenu}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Menu
+                id="menu-appbar"
+                anchorEl={anchorEl}
+                anchorOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                keepMounted
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
+                open={Boolean(anchorEl)}
+                onClose={handleClose}
+              >
+                {menuItems.map((item) => (
+                  <MenuItem
+                    key={item.label}
+                    component={RouterLink}
+                    to={item.path}
+                    onClick={handleClose}
+                  >
+                    {item.label}
+                  </MenuItem>
+                ))}
+                <MenuItem
+                  component={RouterLink}
+                  to="/entrar"
+                  onClick={handleClose}
+                >
+                  Entrar
+                </MenuItem>
+                <MenuItem
+                  component={RouterLink}
+                  to="/cadastrar"
+                  onClick={handleClose}
+                >
+                  Cadastrar
+                </MenuItem>
+              </Menu>
+            </>
+          )}
+        </Toolbar>
+      </Box>
     </AppBar>
   );
 };
