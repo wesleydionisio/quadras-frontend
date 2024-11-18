@@ -233,6 +233,13 @@ const ReservationReview = () => {
               Cancelar
             </Button>
           )}
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate('/perfil')}
+          >
+            Ver reservas
+          </Button>
         </Box>
       </Paper>
 

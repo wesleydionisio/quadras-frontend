@@ -17,6 +17,11 @@ import {
   Avatar,
   Tabs,
   Tab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from '../api/apiService';
@@ -24,6 +29,8 @@ import { useSnackbar } from 'notistack';
 
 const PerfilPage = () => {
   const { user, setUser, login, register, logout } = useContext(AuthContext);
+  console.log('PerfilPage - user:', user);
+  console.log('PerfilPage - setUser:', setUser);
   const navigate = useNavigate();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -52,6 +59,9 @@ const PerfilPage = () => {
     // Adicione outros campos conforme necessário
   });
 
+  // Estado para controle de ordenação
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' para mais recente, 'asc' para mais antiga
+
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -65,21 +75,21 @@ const PerfilPage = () => {
     // eslint-disable-next-line
   }, [user]);
 
-// Função para buscar as reservas do usuário
-const fetchReservations = async () => {
-  try {
-    const response = await axios.get('/bookings/user'); // Certifique-se de que a URL está correta
-    console.log('Reservas recebidas:', response.data.reservas); // Adicionado para depuração
-    if (response.data.success) {
-      setReservations(response.data.reservas);
-    } else {
-      enqueueSnackbar('Não foi possível carregar suas reservas.', { variant: 'error' });
+  // Função para buscar as reservas do usuário
+  const fetchReservations = async () => {
+    try {
+      const response = await axios.get('/bookings/user'); // Certifique-se de que a URL está correta
+      console.log('Reservas recebidas:', response.data.reservas); // Adicionado para depuração
+      if (response.data.success) {
+        setReservations(response.data.reservas);
+      } else {
+        enqueueSnackbar('Não foi possível carregar suas reservas.', { variant: 'error' });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar reservas:', error);
+      enqueueSnackbar('Erro ao buscar reservas. Tente novamente.', { variant: 'error' });
     }
-  } catch (error) {
-    console.error('Erro ao buscar reservas:', error);
-    enqueueSnackbar('Erro ao buscar reservas. Tente novamente.', { variant: 'error' });
-  }
-};
+  };
 
   // Função para lidar com a edição dos campos do perfil
   const handleChangeProfile = (e) => {
@@ -92,7 +102,7 @@ const fetchReservations = async () => {
   // Função para salvar as alterações do perfil
   const handleSave = async () => {
     try {
-      const response = await axios.put('/users/profile', profileData); // Corrigir a rota se necessário
+      const response = await axios.put('/auth/profile', profileData); // Corrigir a rota para /auth/profile
       if (response.data.success) {
         enqueueSnackbar('Perfil atualizado com sucesso.', { variant: 'success' });
         setEditing(false);
@@ -154,55 +164,155 @@ const fetchReservations = async () => {
     }
   };
 
-  // Função para renderizar os cards de reservas
+  // Função para renderizar os cards de reservas com filtro e labels de status
   const renderReservations = () => {
     if (reservations.length === 0) {
       return <Typography variant="body1">Você não possui reservas.</Typography>;
     }
-  
+
+    // Ordenar as reservas com base no sortOrder
+    const sortedReservations = [...reservations].sort((a, b) => {
+      const dateA = new Date(a.data);
+      const dateB = new Date(b.data);
+      if (sortOrder === 'asc') {
+        return dateA - dateB;
+      } else {
+        return dateB - dateA;
+      }
+    });
+
     return (
-      <Grid container spacing={2}>
-        {reservations.map(reserva => (
-          <Grid item xs={12} sm={6} md={4} key={reserva._id}>
-            <Card>
-              <CardHeader
-                avatar={
-                  <Avatar 
-                    src={reserva.quadra_id?.foto_principal || 'https://via.placeholder.com/150'} 
-                    alt={reserva.quadra_id?.nome || 'Quadra'} 
-                  />
-                }
-                title={reserva.quadra_id?.nome || 'Nome da Quadra'}
-                subheader={`${reserva.horario_inicio} - ${reserva.horario_fim}`}
-              />
-              <CardContent>
-                <Typography variant="body2" color="textSecondary">
-                  Data: {new Date(reserva.data).toLocaleDateString('pt-BR')}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Esporte: {reserva.esporte?.nome || 'Esporte'}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Status: {reserva.status}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Total: R$ {reserva.total !== undefined ? reserva.total.toFixed(2) : '0.00'}
-                </Typography>
-              </CardContent>
-              <CardActions>
-                <Button 
-                  size="small" 
-                  color="primary" 
-                  onClick={() => navigate(`/reservation-review/${reserva._id}`)}
-                >
-                  Revisar Reserva
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      <>
+        {/* Controle de Ordenação */}
+        <Box mb={2} display="flex" justifyContent="flex-end">
+          <FormControl variant="outlined" size="small">
+            <InputLabel id="sort-order-label">Ordenar Por</InputLabel>
+            <Select
+              labelId="sort-order-label"
+              id="sort-order"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              label="Ordenar Por"
+            >
+              <MenuItem value="desc">Mais Recentes</MenuItem>
+              <MenuItem value="asc">Mais Antigas</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Grid container spacing={2}>
+          {sortedReservations.map(reserva => (
+            <Grid item xs={12} sm={6} md={4} key={reserva._id}>
+  <Card sx={{ height: '380px' }}> {/* Aumentei a altura total do card */}
+    {/* Parte Superior: Imagem com Overlay */}
+    <Box
+      sx={{
+        height: '200px', // Altura fixa para a imagem
+        position: 'relative',
+        backgroundImage: `url(${reserva.quadra_id?.foto_principal || 'https://via.placeholder.com/150'})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Overlay contido dentro da área da imagem */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0, // Garante que o overlay termine onde a imagem termina
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          color: '#fff',
+          padding: 2,
+          textAlign: 'center',
+        }}
+      >
+        <Typography variant="h6" component="div">
+          {reserva.quadra_id?.nome || 'Nome da Quadra'}
+        </Typography>
+        <Typography variant="body2">
+          {reserva.esporte?.nome || 'Esporte'}
+        </Typography>
+      </Box>
+    </Box>
+
+    {/* Parte Inferior: Informações da Reserva */}
+    <Box
+      sx={{
+        flex: 1, // Permite que a área de informações ocupe o espaço restante
+        backgroundColor: '#fff',
+        padding: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
+      <Box>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>Data:</strong> {new Date(reserva.data).toLocaleDateString('pt-BR')}
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <strong>Hora:</strong> {reserva.horario_inicio} - {reserva.horario_fim}
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 2 }}> {/* Adicionei margem embaixo */}
+          <strong>Total:</strong> R$ {reserva.total !== undefined ? reserva.total.toFixed(2) : '0.00'}
+        </Typography>
+      </Box>
+
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mt: 'auto' // Empurra os botões para baixo
+      }}>
+        <StatusLabel status={reserva.status} />
+        <Button
+          variant="contained"
+          color="primary"
+          size="small"
+          onClick={() => navigate(`/reservation-review/${reserva._id}`)}
+        >
+          Ver Reserva
+        </Button>
+      </Box>
+    </Box>
+  </Card>
+</Grid>
+          ))}
+        </Grid>
+      </>
     );
+  };
+
+  // Componente para exibir o label de status
+  const StatusLabel = ({ status }) => {
+    let color;
+    let label;
+
+    switch (status.toLowerCase()) {
+      case 'confirmada':
+        color = 'success';
+        label = 'Confirmada';
+        break;
+      case 'pendente':
+        color = 'warning';
+        label = 'Pendente';
+        break;
+      case 'cancelada':
+        color = 'error';
+        label = 'Cancelada';
+        break;
+      default:
+        color = 'default';
+        label = status;
+    }
+
+    return <Chip label={label} color={color} size="small" />;
   };
 
   // Se o usuário não estiver autenticado, mostrar o formulário de login/cadastro
@@ -394,6 +504,32 @@ const fetchReservations = async () => {
       </Paper>
     </Container>
   );
+};
+
+// Componente para exibir o label de status
+const StatusLabel = ({ status }) => {
+  let color;
+  let label;
+
+  switch (status.toLowerCase()) {
+    case 'confirmada':
+      color = 'success';
+      label = 'Confirmada';
+      break;
+    case 'pendente':
+      color = 'warning';
+      label = 'Pendente';
+      break;
+    case 'cancelada':
+      color = 'error';
+      label = 'Cancelada';
+      break;
+    default:
+      color = 'default';
+      label = status;
+  }
+
+  return <Chip label={label} color={color} size="small" />;
 };
 
 export default PerfilPage;

@@ -1,88 +1,128 @@
-// src/context/AuthContext.jsx
-
 import React, { createContext, useState, useEffect } from 'react';
-import axios from '../api/apiService'; // Certifique-se de que esta é a instância correta do axios
+import axios from '../api/apiService';
+import { useSnackbar } from 'notistack';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const { enqueueSnackbar } = useSnackbar();
   const [user, setUser] = useState(null);
+  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken'));
   const [loading, setLoading] = useState(true);
 
-  const loadUser = async () => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      try {
-        // Definir o token nos headers do axios (já feito pelo interceptor)
-        // Chamar a API para obter os dados do usuário
-        const response = await axios.get('/users/profile'); // Corrigir a rota
-        if (response.data.success) {
-          setUser(response.data.user);
-        } else {
-          setUser(null);
-          localStorage.removeItem('authToken');
-          delete axios.defaults.headers.common['Authorization'];
-        }
-      } catch (error) {
-        console.error('Erro ao carregar o usuário:', error);
-        setUser(null);
-        localStorage.removeItem('authToken');
-        delete axios.defaults.headers.common['Authorization'];
-      }
-    }
-    setLoading(false);
-  };
-
   useEffect(() => {
-    loadUser();
-    // eslint-disable-next-line
-  }, []);
+    if (authToken) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      fetchUser();
+    } else {
+      setLoading(false);
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, [authToken]);
 
-  // Função para login
-  const login = async (email, password) => {
+  const fetchUser = async () => {
     try {
-      const response = await axios.post('/auth/login', { email, password });
+      const response = await axios.get('/auth/me');
       if (response.data.success) {
-        localStorage.setItem('authToken', response.data.token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         setUser(response.data.user);
-        return { success: true };
       } else {
-        return { success: false, message: response.data.message };
+        handleAuthError();
       }
     } catch (error) {
-      console.error('Erro no login:', error);
-      return { success: false, message: 'Erro no login. Tente novamente.' };
+      console.error('Erro ao buscar usuário:', error);
+      handleAuthError();
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Função para logout
-  const logout = () => {
-    localStorage.removeItem('authToken');
+  const handleAuthError = () => {
+    enqueueSnackbar('Sessão expirada. Faça login novamente.', { variant: 'error' });
     setUser(null);
+    setAuthToken(null);
+    localStorage.removeItem('authToken');
     delete axios.defaults.headers.common['Authorization'];
   };
 
-  // Função para registrar um novo usuário
-  const register = async (userData) => {
+  const updateUserProfile = async (profileData) => {
     try {
-      const response = await axios.post('/auth/register', userData);
+      const response = await axios.put('/users/profile', profileData);
       if (response.data.success) {
-        localStorage.setItem('authToken', response.data.token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         setUser(response.data.user);
+        enqueueSnackbar('Perfil atualizado com sucesso.', { variant: 'success' });
         return { success: true };
       } else {
+        enqueueSnackbar(response.data.message || 'Não foi possível atualizar o perfil.', { variant: 'error' });
         return { success: false, message: response.data.message };
       }
     } catch (error) {
-      console.error('Erro no cadastro:', error);
-      return { success: false, message: 'Erro no cadastro. Tente novamente.' };
+      console.error('Erro ao atualizar perfil:', error);
+      enqueueSnackbar('Erro ao atualizar perfil. Tente novamente.', { variant: 'error' });
+      return { success: false, message: error.response?.data?.message || 'Erro ao atualizar perfil.' };
     }
   };
 
+  const login = async (email, password) => {
+    try {
+      const response = await axios.post('/auth/login', { email, password });
+      if (response.data.success && response.data.token) {
+        const token = response.data.token;
+        setAuthToken(token);
+        localStorage.setItem('authToken', token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        setUser(response.data.user);
+        return { success: true };
+      }
+      return { success: false, message: response.data.message || 'Falha no login.' };
+    } catch (error) {
+      console.error('Erro no login:', error);
+      return { success: false, message: error.response?.data?.message || 'Erro no login.' };
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      const response = await axios.post('/auth/register', userData);
+      if (response.data.success && response.data.token) {
+        const token = response.data.token;
+        setAuthToken(token);
+        localStorage.setItem('authToken', token);
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        setUser(response.data.user);
+        return { success: true };
+      }
+      return { success: false, message: response.data.message || 'Falha no cadastro.' };
+    } catch (error) {
+      console.error('Erro no cadastro:', error);
+      return { success: false, message: error.response?.data?.message || 'Erro no cadastro.' };
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    setAuthToken(null);
+    localStorage.removeItem('authToken');
+    delete axios.defaults.headers.common['Authorization'];
+    enqueueSnackbar('Deslogado com sucesso.', { variant: 'success' });
+  };
+
+  if (loading) {
+    return <div>Carregando...</div>;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        setUser, 
+        authToken, 
+        login, 
+        register, 
+        logout, 
+        loading,
+        updateUserProfile 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
