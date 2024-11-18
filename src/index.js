@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
+import './index.css' // Adicione esta linha
 import AppRoutes from './routes';
 import { AuthProvider } from './context/AuthContext';
 import { SnackbarProvider } from 'notistack';
