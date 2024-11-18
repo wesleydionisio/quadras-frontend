@@ -18,9 +18,11 @@ import {
   Chip,
 } from '@mui/material';
 import axios from '../api/apiService';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { useSnackbar } from 'notistack'; // Importar useSnackbar
+import dayjs from 'dayjs';
+import 'dayjs/locale/pt-br';
+
+dayjs.locale('pt-br');
 
 const ReservationReview = () => {
   const { reservationId } = useParams(); // Extrai o ID da reserva da URL
@@ -172,7 +174,7 @@ const ReservationReview = () => {
 
   // Verificar se bookingDate está definido
   const formattedDate = bookingDate
-    ? format(bookingDate, 'eeee, d MMMM yyyy', { locale: ptBR })
+    ? dayjs(bookingDate).format('DD [de] MMMM [de] YYYY')
     : 'Data inválida';
 
   return (

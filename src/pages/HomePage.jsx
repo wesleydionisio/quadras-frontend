@@ -41,27 +41,6 @@ const HomePage = () => {
       <HeroSection courts={courts} loading={loading} />
       <AboutSection />
       
-      {/* Sessão de Quadras Disponíveis */}
-      <Container sx={{ mt: 5 }}>
-        <Typography variant="h4" align="center" gutterBottom>
-          Quadras Disponíveis
-        </Typography>
-        <Grid container spacing={3}>
-          {loading ? (
-            skeletonGrid
-          ) : courts.length > 0 ? (
-            courts.map((court) => (
-              <Grid item xs={12} sm={6} md={4} key={court._id}>
-                <DefaultCourtCard court={court} />
-              </Grid>
-            ))
-          ) : (
-            <Typography variant="h6" align="center" sx={{ width: '100%' }}>
-              Nenhuma quadra disponível no momento.
-            </Typography>
-          )}
-        </Grid>
-      </Container>
     </>
   );
 };

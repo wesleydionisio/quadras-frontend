@@ -1,35 +1,37 @@
 // src/components/booking/SportsButtons.jsx
 import React from 'react';
-import { Grid, Button, Typography } from '@mui/material';
-import SportsSoccerIcon from '@mui/icons-material/SportsSoccer';
-import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
+import { Button, Box } from '@mui/material';
 import SportsTennisIcon from '@mui/icons-material/SportsTennis';
-// Importe outros ícones conforme necessário
-
-const iconMapping = {
-  futebol: <SportsSoccerIcon />,
-  basquete: <SportsBasketballIcon />,
-  tenis: <SportsTennisIcon />,
-  // Adicione outros mapeamentos conforme os esportes disponíveis
-};
+import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
+import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
+import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 
 const SportsButtons = ({ sports, selectedSport, onSportSelect }) => {
+  // Mapa de ícones para cada esporte
+  const sportIcons = {
+    'Tênis': <SportsTennisIcon />,
+    'Vôlei': <SportsVolleyballIcon />,
+    'Basquete': <SportsBasketballIcon />,
+    'Futebol': <SportsFootballIcon />
+  };
+
   return (
-    <Grid container spacing={2}>
+    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
       {sports.map((sport) => (
-        <Grid item xs={6} sm={4} key={sport._id}>
-          <Button
-            variant={selectedSport === sport._id ? 'contained' : 'outlined'}
-            color={selectedSport === sport._id ? 'primary' : 'default'}
-            onClick={() => onSportSelect(sport._id)}
-            startIcon={iconMapping[sport.nome.toLowerCase()] || <SportsSoccerIcon />}
-            fullWidth
-          >
-            <Typography variant="body1">{sport.nome}</Typography>
-          </Button>
-        </Grid>
+        <Button
+          key={sport._id} // Assumindo que cada esporte tem um _id
+          variant={selectedSport === sport._id ? "contained" : "outlined"}
+          onClick={() => onSportSelect(sport._id)}
+          startIcon={sportIcons[sport.nome]} // Usando o nome do esporte para pegar o ícone
+          sx={{
+            minWidth: '120px',
+            py: 1,
+          }}
+        >
+          {sport.nome} {/* Usando o nome do esporte */}
+        </Button>
       ))}
-    </Grid>
+    </Box>
   );
 };
 

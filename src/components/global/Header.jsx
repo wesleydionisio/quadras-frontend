@@ -60,15 +60,33 @@ const Header = () => {
       position="fixed"
       elevation={elevate ? 4 : 0}
       sx={{
-        transition: 'background-color 0.3s ease',
-        backgroundColor: elevate ? '#fff' : 'transparent',
+        transition: 'all 0.3s ease',
+        backgroundColor: elevate 
+          ? 'rgba(255, 255, 255, 0.8)' // Fundo semi-transparente quando elevado
+          : 'rgba(0, 0, 0, 0.2)',      // Overlay escuro quando não elevado
+        backdropFilter: 'blur(8px)',    // Efeito de blur
+        WebkitBackdropFilter: 'blur(8px)', // Suporte para Safari
         color: elevate ? '#000' : '#fff',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: elevate 
+            ? 'linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1))'
+            : 'linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))',
+          zIndex: -1,
+        },
       }}
     >
       <Box sx={{ 
         width: '100%',
         display: 'flex',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        position: 'relative', // Para manter o conteúdo acima do overlay
+        zIndex: 1,
       }}>
         <Toolbar sx={{ 
           padding: '8px 16px',
@@ -194,7 +212,7 @@ const Header = () => {
                 </MenuItem>
                 <MenuItem
                   component={RouterLink}
-                  to="/cadastrar"
+                  to="/login"
                   onClick={handleClose}
                 >
                   Cadastrar
