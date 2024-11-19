@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Container, 
@@ -19,7 +19,7 @@ import axios from '../api/apiService';
 import BookingCalendar from '../components/booking/Calendar';
 import TimeSlots from '../components/booking/TimeSlots';
 import SportsButtons from '../components/booking/SportsButtons';
-import PaymentButtons from '../components/booking/PaymentButtons';
+import PaymentButton from '../components/booking/PaymentButton';
 import Slider from "react-slick";
 import Lightbox from "yet-another-react-lightbox";
 import "slick-carousel/slick/slick.css";
@@ -30,6 +30,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/pt-br'; // Importando localização brasileira
 import customParseFormat from 'dayjs/plugin/customParseFormat'; // Para parsing de formato personalizado
 import utc from 'dayjs/plugin/utc'; // Para manipulação de UTC
+import { useSnackbar } from 'notistack';
 
 const OptionSkeleton = ({ title }) => (
   <Box>
@@ -56,7 +57,7 @@ const BookingPage = () => {
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedSport, setSelectedSport] = useState('');
-  const [selectedPayment, setSelectedPayment] = useState('');
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const [timeSlots, setTimeSlots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -64,6 +65,9 @@ const BookingPage = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const theme = useTheme();
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
 
   const horarioInicio = 8;
   const horarioFim = 22;
@@ -93,30 +97,51 @@ const BookingPage = () => {
     return slots;
   };
 
-  // Buscar detalhes da quadra
-  useEffect(() => {
-    const fetchCourtDetails = async () => {
-      try {
-        const response = await axios.get(`/courts/${quadraId}`); // Requisição correta
-        console.log('Resposta da API /courts/:id:', response.data); // Log para inspeção
+  // Função para buscar métodos de pagamento
+  const fetchPaymentMethods = useCallback(async (courtId) => {
+    try {
+      setLoadingPayments(true);
+      const response = await axios.get(`/payment-methods/courts/${courtId}`);
+      
+      if (response.data.success && Array.isArray(response.data.paymentMethods)) {
+        setPaymentMethods(response.data.paymentMethods);
+      } else {
+        console.error('Formato inválido de resposta:', response.data);
+        setError('Erro ao carregar métodos de pagamento');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar métodos de pagamento:', error);
+      setError('Erro ao carregar métodos de pagamento');
+    } finally {
+      setLoadingPayments(false);
+    }
+  }, []);
 
-        // Ajuste conforme a estrutura da resposta
-        if (response.data.court) {
-          setCourt(response.data.court);
-        } else if (response.data.data) {
-          setCourt(response.data.data);
-        } else {
-          setCourt(response.data); // Caso a estrutura seja diferente
+  // useEffect para carregar dados da quadra e métodos de pagamento
+  useEffect(() => {
+    if (!quadraId) return;
+
+    const loadCourtData = async () => {
+      try {
+        setLoading(true);
+        const [courtResponse] = await Promise.all([
+          axios.get(`/courts/${quadraId}`),
+          fetchPaymentMethods(quadraId)
+        ]);
+
+        if (courtResponse.data.success) {
+          setCourt(courtResponse.data.court);
         }
       } catch (error) {
-        console.error('Erro ao buscar detalhes da quadra:', error);
-        setError('Não foi possível carregar os detalhes da quadra.');
-        setLoading(false); // Parar o loading em caso de erro
+        console.error('Erro ao carregar dados:', error);
+        setError('Erro ao carregar dados da quadra');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchCourtDetails();
-  }, [quadraId]);
+    loadCourtData();
+  }, [quadraId, fetchPaymentMethods]);
 
   // Buscar horários reservados
   useEffect(() => {
@@ -145,42 +170,81 @@ const BookingPage = () => {
     }
   }, [selectedDate, quadraId]);
 
-  // Função para confirmar reserva
+  const validateBookingData = (data) => {
+    const errors = [];
+    
+    if (!data.quadra_id) errors.push('ID da quadra é obrigatório');
+    if (!data.data) errors.push('Data é obrigatória');
+    if (!data.horario_inicio) errors.push('Horário de início é obrigatório');
+    if (!data.horario_fim) errors.push('Horário de fim é obrigatório');
+    if (!data.esporte_id) errors.push('Esporte é obrigatório');
+    if (!data.pagamento) errors.push('Forma de pagamento é obrigatória');
+    
+    return errors;
+  };
+
   const handleConfirmReservation = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      // Validações iniciais com feedback visual
+      if (!selectedDate) {
+        enqueueSnackbar('Selecione uma data', { variant: 'error' });
+        return;
+      }
+      if (!selectedSlot) {
+        enqueueSnackbar('Selecione um horário', { variant: 'error' });
+        return;
+      }
+      if (!selectedSport) {
+        enqueueSnackbar('Selecione um esporte', { variant: 'error' });
+        return;
+      }
+      if (!selectedPayment) {
+        enqueueSnackbar('Selecione um método de pagamento', { variant: 'error' });
+        return;
+      }
 
-      // Aqui, substitua 'Nome do Cliente' por dados reais do usuário.
-      // Se estiver usando um contexto de autenticação, recupere o nome do usuário a partir dele.
-      const userName = 'Nome do Cliente'; // Exemplo estático
-
-      const requestBody = {
+      const reservationData = {
         quadra_id: quadraId,
-        data: selectedDate.toISOString().split('T')[0],
+        data: selectedDate.format('YYYY-MM-DD'),
         horario_inicio: selectedSlot.horario_inicio,
         horario_fim: selectedSlot.horario_fim,
         esporte_id: selectedSport,
-        pagamento: selectedPayment,
+        pagamento: selectedPayment._id
       };
 
-      // Requisição para criar a reserva
-      const response = await axios.post(`/bookings`, requestBody);
-
-      if (response.data.success) {
-        // Obter o ID da reserva criada
-        const reservationId = response.data.reserva._id; // Ajuste conforme a resposta da API
-
-        // Redireciona para a página de revisão com o ID da reserva na URL
-        navigate(`/reservation-review/${reservationId}`);
+      const response = await axios.post('/bookings', reservationData);
+      
+      if (response.data && response.data.reserva) {
+        enqueueSnackbar('Reserva criada com sucesso!', { variant: 'success' });
+        setTimeout(() => {
+          navigate(`/reservas/${response.data.reserva._id}`);
+        }, 1000);
       } else {
-        // Trate o caso de falha na criação da reserva
-        alert('Não foi possível confirmar a reserva. Tente novamente.');
+        enqueueSnackbar('Erro ao processar a reserva. Tente novamente.', { 
+          variant: 'warning' 
+        });
+        setTimeout(() => {
+          navigate('/perfil');
+        }, 1000);
       }
     } catch (error) {
-      console.error('Erro ao confirmar a reserva:', error);
-      const errorMessage =
-        error.response?.data?.message || 'Não foi possível confirmar a reserva. Tente novamente.';
-      alert(errorMessage);
+      // Tratamento específico para erros de validação do backend
+      if (error.response?.status === 400) {
+        const errorMessage = error.response.data.message;
+        const validationErrors = error.response.data.errors;
+        
+        enqueueSnackbar(errorMessage, { variant: 'error' });
+        
+        if (Array.isArray(validationErrors)) {
+          validationErrors.forEach(err => {
+            enqueueSnackbar(err, { variant: 'error' });
+          });
+        }
+      } else {
+        enqueueSnackbar('Erro ao criar reserva. Tente novamente.', { 
+          variant: 'error' 
+        });
+      }
     }
   };
 
@@ -220,6 +284,17 @@ const BookingPage = () => {
     setSelectedDate(newDate);
     // Aqui você pode adicionar qualquer lógica adicional necessária
     // quando a data mudar
+  };
+
+  // Log para debug dos métodos de pagamento
+  useEffect(() => {
+    console.log('Estado atual dos métodos de pagamento:', paymentMethods);
+  }, [paymentMethods]);
+
+  // Função para lidar com a seleção de método de pagamento
+  const handlePaymentSelect = (method) => {
+    console.log('Método de pagamento selecionado:', method);
+    setSelectedPayment(method);
   };
 
   return (
@@ -520,15 +595,16 @@ const BookingPage = () => {
                           <Typography variant="h6" gutterBottom>
                             Forma de Pagamento:
                           </Typography>
-                          <PaymentButtons
-                            payments={court.formas_pagamento || []}
+                          <PaymentButton
+                            paymentMethods={paymentMethods}
                             selectedPayment={selectedPayment}
-                            onPaymentSelect={setSelectedPayment}
+                            onPaymentSelect={handlePaymentSelect}
+                            loading={loadingPayments}
                             showGlow={selectedDate && selectedSlot && selectedSport && !selectedPayment}
                           />
                         </>
                       ) : (
-                        <OptionSkeleton title="Selecione uma Forma de Pagamento:" />
+                        <OptionSkeleton title="Forma de Pagamento:" />
                       )}
                     </Box>
                   </Box>

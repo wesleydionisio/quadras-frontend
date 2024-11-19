@@ -1,12 +1,12 @@
 // src/components/booking/SportsButtons.jsx
 import React from 'react';
-import { Button, Box } from '@mui/material';
+import { Button, Box, Stack } from '@mui/material';
 import SportsTennisIcon from '@mui/icons-material/SportsTennis';
 import SportsVolleyballIcon from '@mui/icons-material/SportsVolleyball';
 import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
 import SportsFootballIcon from '@mui/icons-material/SportsFootball';
 
-const SportsButtons = ({ sports, selectedSport, onSportSelect }) => {
+const SportsButtons = ({ sports, selectedSport, onSportSelect, showGlow }) => {
   // Mapa de ícones para cada esporte
   const sportIcons = {
     'Tênis': <SportsTennisIcon />,
@@ -15,23 +15,28 @@ const SportsButtons = ({ sports, selectedSport, onSportSelect }) => {
     'Futebol': <SportsFootballIcon />
   };
 
+  const handleSportSelect = (sport) => {
+    onSportSelect(sport._id);
+  };
+
   return (
-    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+    <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 1 }}>
       {sports.map((sport) => (
         <Button
-          key={sport._id} // Assumindo que cada esporte tem um _id
+          key={sport._id}
           variant={selectedSport === sport._id ? "contained" : "outlined"}
           onClick={() => onSportSelect(sport._id)}
-          startIcon={sportIcons[sport.nome]} // Usando o nome do esporte para pegar o ícone
           sx={{
             minWidth: '120px',
-            py: 1,
+            ...(showGlow && {
+              boxShadow: '0 0 15px rgba(25, 118, 210, 0.4)'
+            })
           }}
         >
-          {sport.nome} {/* Usando o nome do esporte */}
+          {sport.nome}
         </Button>
       ))}
-    </Box>
+    </Stack>
   );
 };
 

@@ -3,27 +3,32 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api',
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  },
+  withCredentials: false
 });
 
-// Interceptor para adicionar o token em todas as requisições
+// Interceptor para adicionar o token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('Token anexado ao header:', config.headers.Authorization);
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
-// Interceptor para lidar com respostas de erro 401
+// Interceptor para erros 401
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Remover token e redirecionar para login se o token for inválido ou expirado
       localStorage.removeItem('authToken');
       window.location.href = '/login';
     }

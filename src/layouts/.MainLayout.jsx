@@ -1,8 +1,8 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { Outlet } from 'react-router-dom';
-import Header from '../global/Header';
-import Footer from '../global/Footer';
+import Header from '../components/global/Header';
+import Footer from '../components/global/Footer';
 
 const MainLayout = () => {
   return (
@@ -12,7 +12,9 @@ const MainLayout = () => {
         component="main" 
         sx={{ 
           flexGrow: 1,
-          paddingTop: '76px', // Altura do header + padding
+          position: 'relative',
+          zIndex: 0,
+          paddingTop: '76px',
         }}
       >
         <Outlet />
